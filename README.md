@@ -2,6 +2,8 @@
 
 Auto-pulls tech/startup/AI news → generates 5 MCQs → tracks streak. No essays. Just reps.
 
+**Live:** [https://dailytechquiz.vercel.app/](https://dailytechquiz.vercel.app/) · **Demo:** [imgur.com/a/PalfQXZ](https://i.imgur.com/9pCbVAB.gif)
+
 ## Quick start
 
 1. **Install**
