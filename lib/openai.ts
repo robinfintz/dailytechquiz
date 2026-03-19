@@ -4,7 +4,7 @@ import type { GeneratedQuizPayload, GeneratedQuestion } from "@/lib/types";
 const systemPrompt = `You will receive tech news summaries.
 Return ONLY valid JSON with exactly this shape (keys and types must match):
 {
-  "briefing": "string with 10-12 bullet lines (one topic per line)",
+  "briefing": ["string", "string", "string", "string", "string", "string", "string", "string", "string", "string", "string", "string"],
   "questions": [
     {
       "question": "string",
@@ -16,8 +16,8 @@ Return ONLY valid JSON with exactly this shape (keys and types must match):
 
 Rules:
 - "questions" MUST have EXACTLY 5 items.
-- "briefing" MUST contain 10-12 lines (one topic per line).
-- Each briefing line MUST be plain text (no leading "-" or "•" characters).
+- "briefing" MUST be an array with EXACTLY 12 strings.
+- Each briefing string must be plain text with no leading "-" or "•" characters.
 - Each question must be specific and factual and include 4 options with exactly 1 correct answer.
 - "correctIndex" MUST be an integer from 0 to 3.
 - Avoid opinion/speculation.
@@ -50,7 +50,7 @@ export async function generateMcqs(summaries: string): Promise<GenerateQuizResul
     if (!raw) throw new Error("No response from OpenAI");
 
     const parsed = JSON.parse(raw) as {
-      briefing?: string;
+      briefing?: unknown;
       questions?: GeneratedQuizPayload["questions"];
     };
 
@@ -65,51 +65,68 @@ export async function generateMcqs(summaries: string): Promise<GenerateQuizResul
       continue;
     }
 
-  const briefingRaw =
-    typeof parsed.briefing === "string" && parsed.briefing.trim().length > 0
-      ? parsed.briefing.trim()
-      : null;
+    const briefingLines: string[] = (() => {
+      if (Array.isArray(parsed.briefing)) {
+        return parsed.briefing
+          .map((x) => (typeof x === "string" ? x : String(x)))
+          .map((s) => s.trim())
+          .map((s) => s.replace(/^[-•]\s*/, ""))
+          .filter(Boolean);
+      }
 
-  const briefingLines =
-    briefingRaw
-      ?.split(/\r?\n/)
-      .map((s) => s.trim())
-      .map((s) => s.replace(/^[-•]\s*/, ""))
-      .filter(Boolean) ?? [];
+      if (typeof parsed.briefing === "string") {
+        // Back-compat if the model still returns a single string.
+        // Convert common bullet separators into newlines so we can count items reliably.
+        const normalized = parsed.briefing.replace(/\r/g, "").trim();
+        const withNewlines = normalized
+          // "• item" style
+          .replace(/•/g, "\n")
+          // "- item" style when it appears at the start of a line
+          .replace(/(^|\n)\s*-\s+/g, "\n");
 
-  if (briefingLines.length < 10 || briefingLines.length > 12) {
-    console.error(
-      "[generateMcqs] Invalid response. Got",
-      briefingLines.length,
-      "briefing lines (need 10-12). Parsed keys:",
-      Object.keys(parsed)
-    );
-    console.error("[generateMcqs] Raw (truncated):", raw.slice(0, 2000));
-    if (attempt === 2) {
-      throw new Error(
-        `Invalid response: need 10-12 briefing lines, got ${briefingLines.length}. Try again.`
+        return withNewlines
+          .split(/\n+/)
+          .map((s) => s.trim())
+          .map((s) => s.replace(/^[-•]\s*/, ""))
+          .filter(Boolean);
+      }
+
+      return [];
+    })();
+
+    if (briefingLines.length !== 12) {
+      console.error(
+        "[generateMcqs] Invalid response. Got",
+        briefingLines.length,
+        "briefing items (need exactly 12). Parsed keys:",
+        Object.keys(parsed)
       );
+      console.error("[generateMcqs] Raw (truncated):", raw.slice(0, 2000));
+      if (attempt === 2) {
+        throw new Error(
+          `Invalid response: need exactly 12 briefing items, got ${briefingLines.length}. Try again.`
+        );
+      }
+      continue;
     }
-    continue;
-  }
 
-  const briefing = briefingLines.join("\n");
+    const briefing = briefingLines.join("\n");
 
-  const questions: GeneratedQuestion[] = qs.slice(0, 5).map((q) => {
-    const rawIdx = Number(q.correctIndex);
-    const correctIndex =
-      Number.isInteger(rawIdx) && rawIdx >= 0 && rawIdx <= 3 ? rawIdx : 0;
-    const options: [string, string, string, string] = Array.isArray(q.options)
-      ? (q.options.slice(0, 4) as [string, string, string, string])
-      : ["A", "B", "C", "D"];
-    return {
-      question: String(q.question ?? ""),
-      options,
-      correctIndex,
-    };
-  });
+    const questions: GeneratedQuestion[] = qs.slice(0, 5).map((q) => {
+      const rawIdx = Number(q.correctIndex);
+      const correctIndex =
+        Number.isInteger(rawIdx) && rawIdx >= 0 && rawIdx <= 3 ? rawIdx : 0;
+      const options: [string, string, string, string] = Array.isArray(q.options)
+        ? (q.options.slice(0, 4) as [string, string, string, string])
+        : ["A", "B", "C", "D"];
+      return {
+        question: String(q.question ?? ""),
+        options,
+        correctIndex,
+      };
+    });
 
-  return { briefing, questions };
+    return { briefing, questions };
   }
   throw new Error("Failed to generate 5 questions");
 }
