@@ -1,15 +1,25 @@
 import OpenAI from "openai";
 import type { GeneratedQuizPayload, GeneratedQuestion } from "@/lib/types";
 
-const systemPrompt = `You will receive tech news summaries. Return valid JSON with two keys:
+const systemPrompt = `You will receive tech news summaries.
+Return ONLY valid JSON with exactly this shape (keys and types must match):
+{
+  "briefing": "string with 8-10 bullet lines (one topic per line)",
+  "questions": [
+    {
+      "question": "string",
+      "options": ["string", "string", "string", "string"],
+      "correctIndex": 0
+    }
+  ]
+}
 
-1. "briefing": A bullet-point summary with exactly 8–10 bullets. Cover a range of topics from the articles: companies, products, deals, launches, AI/tech trends, partnerships, controversies. One topic per bullet. Start each bullet with a short phrase (e.g. "OpenAI: ..." or "Venture funding: ..."). Use newlines to separate bullets; do not use • or - in the text. No specific dollar amounts or percentages unless essential.
-
-2. "questions": An array of EXACTLY 5 multiple choice questions. You MUST include 5 questions. Each question must:
-- Be specific and factual
-- Have 4 answer choices (options array) and exactly 1 correct answer (correctIndex 0–3)
-- Avoid opinion or speculation
-- Prefer conceptual questions: companies, products, strategies, partnerships, implications, who did what. Avoid questions that are mainly about specific numbers (funding amounts, percentages, exact counts) unless the number is central to the story.`;
+Rules:
+- "questions" MUST have EXACTLY 5 items.
+- Each question must be specific and factual and include 4 options with exactly 1 correct answer.
+- "correctIndex" MUST be an integer from 0 to 3.
+- Avoid opinion/speculation.
+- Prefer conceptual questions (who did what, product/company/deal/launch/partnership/implications). Avoid number-chasing unless the number is central.`;
 
 export interface GenerateQuizResult {
   briefing: string | null;
@@ -45,8 +55,9 @@ export async function generateMcqs(summaries: string): Promise<GenerateQuizResul
     const qs = parsed.questions;
     if (!Array.isArray(qs) || qs.length < 5) {
       const count = Array.isArray(qs) ? qs.length : 0;
+      console.error("[generateMcqs] Invalid response. Got", count, "questions. Parsed keys:", Object.keys(parsed));
+      console.error("[generateMcqs] Raw (truncated):", raw.slice(0, 2000));
       if (attempt === 2) {
-        console.error("[generateMcqs] Retry failed. Got", count, "questions.");
         throw new Error(`Invalid response: need 5 questions, got ${count}. Try again.`);
       }
       continue;
