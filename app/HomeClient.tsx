@@ -21,6 +21,7 @@ export default function HomeClient() {
     briefing
       ?.split(/\n+/)
       .map((s) => s.trim())
+      .map((s) => s.replace(/^[-•]\s*/, ""))
       .filter(Boolean) ?? [];
 
   return (

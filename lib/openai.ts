@@ -17,6 +17,7 @@ Return ONLY valid JSON with exactly this shape (keys and types must match):
 Rules:
 - "questions" MUST have EXACTLY 5 items.
 - "briefing" MUST contain 10-12 lines (one topic per line).
+- Each briefing line MUST be plain text (no leading "-" or "•" characters).
 - Each question must be specific and factual and include 4 options with exactly 1 correct answer.
 - "correctIndex" MUST be an integer from 0 to 3.
 - Avoid opinion/speculation.
@@ -64,10 +65,35 @@ export async function generateMcqs(summaries: string): Promise<GenerateQuizResul
       continue;
     }
 
-  const briefing =
+  const briefingRaw =
     typeof parsed.briefing === "string" && parsed.briefing.trim().length > 0
       ? parsed.briefing.trim()
       : null;
+
+  const briefingLines =
+    briefingRaw
+      ?.split(/\r?\n/)
+      .map((s) => s.trim())
+      .map((s) => s.replace(/^[-•]\s*/, ""))
+      .filter(Boolean) ?? [];
+
+  if (briefingLines.length < 10 || briefingLines.length > 12) {
+    console.error(
+      "[generateMcqs] Invalid response. Got",
+      briefingLines.length,
+      "briefing lines (need 10-12). Parsed keys:",
+      Object.keys(parsed)
+    );
+    console.error("[generateMcqs] Raw (truncated):", raw.slice(0, 2000));
+    if (attempt === 2) {
+      throw new Error(
+        `Invalid response: need 10-12 briefing lines, got ${briefingLines.length}. Try again.`
+      );
+    }
+    continue;
+  }
+
+  const briefing = briefingLines.join("\n");
 
   const questions: GeneratedQuestion[] = qs.slice(0, 5).map((q) => {
     const rawIdx = Number(q.correctIndex);
