@@ -4,7 +4,7 @@ import type { GeneratedQuizPayload, GeneratedQuestion } from "@/lib/types";
 const systemPrompt = `You will receive tech news summaries.
 Return ONLY valid JSON with exactly this shape (keys and types must match):
 {
-  "briefing": "string with 8-10 bullet lines (one topic per line)",
+  "briefing": "string with 10-12 bullet lines (one topic per line)",
   "questions": [
     {
       "question": "string",
@@ -16,6 +16,7 @@ Return ONLY valid JSON with exactly this shape (keys and types must match):
 
 Rules:
 - "questions" MUST have EXACTLY 5 items.
+- "briefing" MUST contain 10-12 lines (one topic per line).
 - Each question must be specific and factual and include 4 options with exactly 1 correct answer.
 - "correctIndex" MUST be an integer from 0 to 3.
 - Avoid opinion/speculation.
