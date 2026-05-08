@@ -30,7 +30,7 @@ Auto-pulls tech/startup/AI news → generates 5 MCQs → tracks streak. No essay
    - Landing: [http://localhost:3000](http://localhost:3000)
    - Quiz: [http://localhost:3000/today](http://localhost:3000/today)
 
-## Daily pipeline (6am cron)
+## Daily pipeline (8pm cron)
 
 1. Call `GET /api/generate` with `Authorization: Bearer <CRON_SECRET>` (if `CRON_SECRET` is set).
 2. App fetches RSS (TechCrunch, VentureBeat, OpenAI blog) + HN top stories (last 24h), picks top articles, sends summaries to OpenAI, gets 5 MCQs, stores quiz in DB.
@@ -39,7 +39,7 @@ Auto-pulls tech/startup/AI news → generates 5 MCQs → tracks streak. No essay
 
 ```json
 {
-  "crons": [{ "path": "/api/generate", "schedule": "0 6 * * *" }]
+  "crons": [{ "path": "/api/generate", "schedule": "0 20 * * *" }]
 }
 ```
 
@@ -53,12 +53,19 @@ And set `CRON_SECRET` in project env; Vercel will send it in the `Authorization`
 | `/api/today` | GET | Returns today’s quiz and questions (404 if none). |
 | `/api/submit` | POST | Body: `{ "quizId": "uuid", "score": 0-5 }`. Saves attempt (optional). |
 
+## Features
+
+- **Streak tracking:** Daily quiz completion counter (localStorage)
+- **Accuracy tracking:** Cumulative percentage across all completed quizzes
+- **News briefing:** AI-generated summary of today's top stories on landing page
+- **Quiz feedback:** Instant reveal of correct/incorrect answers with visual feedback
+
 ## Stack
 
-- **Frontend:** Next.js (App Router), Tailwind, one page `/today`
+- **Frontend:** Next.js (App Router), Tailwind, two pages (`/` landing, `/today` quiz)
 - **Backend:** Next API routes
 - **DB:** Supabase Postgres (`quizzes`, `questions`, `attempts`)
-- **Streak:** localStorage (MVP; no auth)
+- **Persistence:** localStorage for streak & accuracy (MVP; no auth)
 
 ## Cost
 
