@@ -20,6 +20,8 @@ Rules:
 - Each briefing string must be plain text with no leading "-" or "•" characters.
 - Each briefing item should be a standalone tech/AI news summary, unrelated to the other items.
 - Each briefing item should be 1-2 sentences maximum.
+- Ensure diversity: avoid mentioning the same company or repeating similar information across briefing items. Each item must cover a distinct topic, company, or event.
+- Prioritize variety in companies, technologies, and news angles to maximize uniqueness.
 - Each question must be specific and factual and include 4 options with exactly 1 correct answer.
 - "correctIndex" MUST be an integer from 0 to 3.
 - Avoid opinion/speculation.
