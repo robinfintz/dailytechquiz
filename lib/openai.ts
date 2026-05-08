@@ -4,7 +4,7 @@ import type { GeneratedQuizPayload, GeneratedQuestion } from "@/lib/types";
 const systemPrompt = `You will receive tech news summaries.
 Return ONLY valid JSON with exactly this shape (keys and types must match):
 {
-  "briefing": ["string", "string", "string", "string", "string", "string", "string", "string", "string", "string", "string", "string"],
+  "briefing": ["string", "string", "string", "string", "string", "string", "string", "string", "string", "string"],
   "questions": [
     {
       "question": "string",
@@ -16,8 +16,10 @@ Return ONLY valid JSON with exactly this shape (keys and types must match):
 
 Rules:
 - "questions" MUST have EXACTLY 5 items.
-- "briefing" MUST be an array with EXACTLY 12 strings.
+- "briefing" MUST be an array with BETWEEN 10 and 15 strings.
 - Each briefing string must be plain text with no leading "-" or "•" characters.
+- Each briefing item should be a standalone tech/AI news summary, unrelated to the other items.
+- Each briefing item should be 1-2 sentences maximum.
 - Each question must be specific and factual and include 4 options with exactly 1 correct answer.
 - "correctIndex" MUST be an integer from 0 to 3.
 - Avoid opinion/speculation.
@@ -94,17 +96,17 @@ export async function generateMcqs(summaries: string): Promise<GenerateQuizResul
       return [];
     })();
 
-    if (briefingLines.length !== 12) {
+    if (briefingLines.length < 10 || briefingLines.length > 15) {
       console.error(
         "[generateMcqs] Invalid response. Got",
         briefingLines.length,
-        "briefing items (need exactly 12). Parsed keys:",
+        "briefing items (need 10-15). Parsed keys:",
         Object.keys(parsed)
       );
       console.error("[generateMcqs] Raw (truncated):", raw.slice(0, 2000));
       if (attempt === 2) {
         throw new Error(
-          `Invalid response: need exactly 12 briefing items, got ${briefingLines.length}. Try again.`
+          `Invalid response: need 10-15 briefing items, got ${briefingLines.length}. Try again.`
         );
       }
       continue;
